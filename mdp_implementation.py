@@ -79,11 +79,19 @@ def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
                     continue
 
                 reward = float(mdp.board[r][c])
-                max_sum = value_iteration_helper_get_max_sum(mdp, (r,c), U_curr)[0]
-                # print(f"--Max sum from all actions is {max_sum}")
-                U_new[r][c] = reward + discount*max_sum
-                # print(f"U_new[{r}][{c}] = {U_new[r][c]}        (reward {reward} + discount {discount}*max_sum {max_sum})")
 
+                # For terminal states, it's just their reward
+                if (r,c) in mdp.terminal_states: # TODO: Is this what I'm supposed to do with terminal states?
+                    U_new[r][c] = reward
+                
+                # Not terminal state
+                else:
+                    max_sum = value_iteration_helper_get_max_sum(mdp, (r,c), U_curr)[0]
+                    # print(f"--Max sum from all actions is {max_sum}")
+                    U_new[r][c] = reward + discount*max_sum
+                    # print(f"U_new[{r}][{c}] = {U_new[r][c]}        (reward {reward} + discount {discount}*max_sum {max_sum})")
+
+                # Update delta
                 if abs(U_new[r][c] - U_curr[r][c])> delta:
                     delta = abs(U_new[r][c] - U_curr[r][c])
                     # print(f"New delta {delta}     (reminder we need delta < {epsilon*(1-discount)/discount})")
