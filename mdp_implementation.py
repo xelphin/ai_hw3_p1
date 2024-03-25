@@ -2,7 +2,8 @@ from copy import deepcopy
 import numpy as np
 
 
-def value_iteration_helper_prob_next_state_from_action(mdp, state, actual_actions_probability, next_state):
+def helper_probability_to_next_state(mdp, state, actual_actions_probability, next_state):
+    # Given probability for each action, what is the probability I get to next_state
     sum_prob = 0
     for index, action in enumerate(mdp.actions):
         if mdp.step(state, action) == next_state:
@@ -10,29 +11,43 @@ def value_iteration_helper_prob_next_state_from_action(mdp, state, actual_action
 
     return sum_prob
 
-def value_iteration_helper_get_max_sum(mdp, state, U_curr):
+    # Why is this important?
+    # Imagine you're in top-left (0,0) cell and you do UP
+    # Probability to get to next_state = (0,0) is equal to prob(LEFT)+prob(UP)   [which we get from actual_actions_probability]
+
+def helper_action_for_max_sum(mdp, state, U_curr):
+
+    # SOLVES: "max a in Actions such that sum [...]"" part of the formula
+
     max_sum_action_tuple = (float('-inf'), "ACTION NONE")
+
     # Iterate over actions
     for picked_action in mdp.actions:
         sum_picked_action = 0
         actual_actions_probability = mdp.transition_function[picked_action]
         states_visited_with_action = []
-        # Iterate over possible states
+        # Iterate over possible states picked_action will get you to (all s')
         for index, actual_action in enumerate(mdp.actions):
-            actual_next_state = mdp.step(state, actual_action)
+            actual_next_state = mdp.step(state, actual_action) # == s'
             if actual_next_state in states_visited_with_action:
                 # print(f"----For ({state[0]},{state[1]}), after {picked_action}, will actually do {actual_action}, gets to state {actual_next_state} : VISITED already, skip")
                 continue
             states_visited_with_action += [actual_next_state]
+
+            # Get properties of s'
             utility_next_state = U_curr[actual_next_state[0]][actual_next_state[1]]
-            prob_next_state = value_iteration_helper_prob_next_state_from_action(mdp, state, actual_actions_probability, actual_next_state)
+            prob_next_state = helper_probability_to_next_state(mdp, state, actual_actions_probability, actual_next_state)
+            calc = prob_next_state*utility_next_state
             
-            sum_picked_action += prob_next_state*utility_next_state
+            # Add calc to sum_picked_action because we are summing
+            sum_picked_action += calc
             # print(f"----For ({state[0]},{state[1]}), after {picked_action}, will actually do {actual_action}, gets to state {actual_next_state}, utility: {utility_next_state}, prob of that state from our action: {prob_next_state} -> add to sum {prob_next_state*utility_next_state}, now sum for action = {sum_picked_action}")
         
+        # Keep only max (sum, action) 
         sum_picked_action_tuple = (sum_picked_action, picked_action)
         max_sum_action_tuple = max(max_sum_action_tuple, sum_picked_action_tuple)
 
+    # Return max (sum, action) 
     return max_sum_action_tuple
 
 def helper_blank_U(rows, cols):
@@ -42,7 +57,7 @@ def helper_blank_U(rows, cols):
         a_row = [0]*cols
         array += [a_row]
 
-    return array #code works
+    return array[:]
 
 def helper_blank_policy(rows, cols):
     # Because arrays are by reference, so i need to be sure i get hard copies
@@ -51,16 +66,14 @@ def helper_blank_policy(rows, cols):
         a_row = ["ACTION NONE"]*cols
         array += [a_row]
 
-    return array #code works
+    return array[:]
 
 
 def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
-    # TODO:
     # Given the mdp, the initial utility of each state - U_init,
     #   and the upper limit - epsilon.
     # run the value iteration algorithm and
     # return: the U obtained at the end of the algorithms' run.
-    #
 
     U_curr = U_init[:]
     U_new = helper_blank_U(mdp.num_row, mdp.num_col)[:]
@@ -86,7 +99,7 @@ def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
                 
                 # Not terminal state
                 else:
-                    max_sum = value_iteration_helper_get_max_sum(mdp, (r,c), U_curr)[0]
+                    max_sum = helper_action_for_max_sum(mdp, (r,c), U_curr)[0]
                     # print(f"--Max sum from all actions is {max_sum}")
                     U_new[r][c] = reward + discount*max_sum
                     # print(f"U_new[{r}][{c}] = {U_new[r][c]}        (reward {reward} + discount {discount}*max_sum {max_sum})")
@@ -106,10 +119,8 @@ def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
 
 
 def get_policy(mdp, U):
-    # TODO:
     # Given the mdp and the utility of each state - U (which satisfies the Belman equation)
     # return: the policy
-    #
 
     policy = helper_blank_policy(mdp.num_row, mdp.num_col)[:]
 
@@ -117,12 +128,10 @@ def get_policy(mdp, U):
     for r in range(mdp.num_row):
         for c in range(mdp.num_col):
             state = (r,c)
-
-            for picked_action in mdp.actions:
-                if mdp.board[r][c] == "WALL":
-                    continue
-                max_action = value_iteration_helper_get_max_sum(mdp, (r,c), U)[1]
-                policy[r][c] = max_action
+            if mdp.board[r][c] == "WALL":
+                continue
+            max_action = helper_action_for_max_sum(mdp, (r,c), U)[1] # TODO: Not sure if this is the calc I want
+            policy[r][c] = max_action
 
     return policy
 
