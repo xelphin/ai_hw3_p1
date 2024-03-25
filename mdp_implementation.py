@@ -3,6 +3,8 @@ import numpy as np
 
 
 def helper_probability_to_next_state(mdp, state, actual_actions_probability, next_state):
+    if state in mdp.terminal_states:
+        return 0
     # Given probability for each action, what is the probability I get to next_state
     sum_prob = 0
     for index, action in enumerate(mdp.actions):
@@ -74,6 +76,52 @@ def helper_blank_policy(rows, cols):
 
     return array[:]
 
+def helper_get_indices_of_walls(mdp):
+    indices = []
+    for r in range(mdp.num_row):
+        for c in range(mdp.num_col):
+            if mdp.board[r][c] == "WALL":
+                indices += [r*mdp.num_col + c]
+    return indices
+
+def helper_clean_matrix(matrix, indices):
+    indices.sort()
+    np_indices = np.array(indices)
+
+    for i in range(0,len(indices)):
+        matrix = np.delete(matrix, np_indices[i], axis=0)
+        matrix = np.delete(matrix, np_indices[i], axis=1)
+        # b = np.delete(b, np_indices[i])
+        np_indices -= 1 # Because you deleted row/col t, you now need to update the indices values
+
+    return matrix
+
+def helper_clean_vector(vector, indices):
+    indices.sort()
+    np_indices = np.array(indices)
+
+    for i in range(0,len(indices)):
+        vector = np.delete(vector, np_indices[i])
+        np_indices -= 1 # Because you deleted row t, you now need to update the indices values
+
+    return vector
+
+def helper_get_U_from_vector(mdp, vector):
+    U_eval = helper_blank_U(mdp.num_row, mdp.num_col)[:]
+    vector_index = 0
+    for r in range(mdp.num_row):
+        for c in range(mdp.num_col):
+            if mdp.board[r][c] == "WALL":
+                continue
+            if vector_index >= len(vector):
+                print("BAD, SHOULDN'T GET HERE")
+                continue
+
+            U_eval[r][c] = vector[vector_index]
+            vector_index += 1
+    
+    return U_eval
+
 
 def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
     # Given the mdp, the initial utility of each state - U_init,
@@ -142,17 +190,50 @@ def get_policy(mdp, U):
     return policy
 
 
-
-
 def policy_evaluation(mdp, policy):
-    # TODO:
     # Given the mdp, and a policy
     # return: the utility U(s) of each state s
-    #
 
-    # ====== YOUR CODE: ======
-    raise NotImplementedError
-    # ========================
+    discount = mdp.gamma
+    wall_indices = helper_get_indices_of_walls(mdp)
+    n = mdp.num_row*mdp.num_col
+    P_matrix = np.zeros((n, n))
+    I_matrix = np.eye(n)
+    R_vector = np.zeros(n)
+
+    # Fill probability matrix
+    for i in range(0, n):
+        for m in range(0, n):
+            state_i = (int(i/mdp.num_col), int(i%mdp.num_col))
+            state_m = (int(m/mdp.num_col), int(m%mdp.num_col))
+            if mdp.board[state_i[0]][state_i[1]] == "WALL":
+                continue
+            action_i = policy[state_i[0]][state_i[1]]
+            actual_actions_probability_s_i = mdp.transition_function[action_i]
+            prob_s_i_to_s_m = helper_probability_to_next_state(mdp, state_i, actual_actions_probability_s_i, state_m)
+            P_matrix[i][m] = prob_s_i_to_s_m
+            R_vector[i] = float(mdp.board[state_i[0]][state_i[1]])
+
+
+    P_matrix_wDiscount = discount*P_matrix
+
+    # Clean
+    P_matrix_wDiscount = helper_clean_matrix(P_matrix_wDiscount, wall_indices[:])
+    I_matrix = helper_clean_matrix(I_matrix, wall_indices[:])
+    R_vector = helper_clean_vector(R_vector, wall_indices[:])
+
+    # Invert (I-P_matrix_wDiscount)
+    Inverse_I_PwDiscount = np.linalg.inv(I_matrix-P_matrix_wDiscount)
+
+    # Calc U_vector
+    U_vector = Inverse_I_PwDiscount @ R_vector
+    # print("U_vector")
+    # print(U_vector)
+
+    # Put in U[][] (while skipping over walls)
+    U_eval = helper_get_U_from_vector(mdp, U_vector)
+    return U_eval
+
 
 
 def policy_iteration(mdp, policy_init):
