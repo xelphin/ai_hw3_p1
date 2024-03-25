@@ -122,6 +122,16 @@ def helper_get_U_from_vector(mdp, vector):
     
     return U_eval
 
+def helper_make_wall_and_terminal_none_policy(mdp, policy):
+    policy_new = policy[:]
+    for r in range(mdp.num_row):
+        for c in range(mdp.num_col):
+            if mdp.board[r][c] == "WALL" or (r,c) in mdp.terminal_states:
+                policy_new[r][c] = None
+
+    return policy_new
+
+
 
 def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
     # Given the mdp, the initial utility of each state - U_init,
@@ -168,7 +178,6 @@ def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
         # print("###################################")
         # mdp.print_utility(U_new)
 
-
     return U_new
 
 
@@ -187,6 +196,7 @@ def get_policy(mdp, U):
             max_action = helper_action_for_max_sum(mdp, (r,c), U)[1] # TODO: Not sure if this is the calc I want
             policy[r][c] = max_action
 
+    policy = helper_make_wall_and_terminal_none_policy(mdp, policy)
     return policy
 
 
@@ -273,6 +283,7 @@ def policy_iteration(mdp, policy_init):
         # print("Current Policy:")
         # mdp.print_policy(policy_curr)
     
+    policy_curr = helper_make_wall_and_terminal_none_policy(mdp, policy_curr)
     return policy_curr
 
 
