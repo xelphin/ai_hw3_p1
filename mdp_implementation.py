@@ -209,7 +209,11 @@ def policy_evaluation(mdp, policy):
             if mdp.board[state_i[0]][state_i[1]] == "WALL":
                 continue
             action_i = policy[state_i[0]][state_i[1]]
-            actual_actions_probability_s_i = mdp.transition_function[action_i]
+            if (action_i == None):
+                # Terminal state (can't move anywhere)
+                actual_actions_probability_s_i = (0, 0, 0, 0)
+            else:
+                actual_actions_probability_s_i = mdp.transition_function[action_i]
             prob_s_i_to_s_m = helper_probability_to_next_state(mdp, state_i, actual_actions_probability_s_i, state_m)
             P_matrix[i][m] = prob_s_i_to_s_m
             R_vector[i] = float(mdp.board[state_i[0]][state_i[1]])
@@ -243,9 +247,33 @@ def policy_iteration(mdp, policy_init):
     # return: the optimal policy
     #
 
-    # ====== YOUR CODE: ======
-    raise NotImplementedError
-    # ========================
+    U_curr = helper_blank_U(mdp.num_row, mdp.num_col)[:]
+    policy_curr = policy_init[:]
+    unchanged = False
+
+    while not unchanged:
+        U_curr = policy_evaluation(mdp, policy_curr[:])
+        unchanged = True
+        
+        # For each state s in S
+        for r in range(mdp.num_row):
+            for c in range(mdp.num_col):
+                # Skip wall states and terminal states
+                if (mdp.board[r][c] == "WALL") or ((r,c) in mdp.terminal_states):
+                    continue
+                # Not terminal state
+                else:
+                    picked_action = policy_curr[r][c]
+                    action_sum = helper_action_for_max_sum_aux(mdp, (r,c), U_curr, picked_action)
+                    (max_sum, max_action) = helper_action_for_max_sum(mdp, (r,c), U_curr)
+                    if max_sum > action_sum:
+                        policy_curr[r][c] = max_action
+                        unchanged = False
+
+        # print("Current Policy:")
+        # mdp.print_policy(policy_curr)
+    
+    return policy_curr
 
 
 
