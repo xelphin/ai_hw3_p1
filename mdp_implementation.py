@@ -15,6 +15,32 @@ def helper_probability_to_next_state(mdp, state, actual_actions_probability, nex
     # Imagine you're in top-left (0,0) cell and you do UP
     # Probability to get to next_state = (0,0) is equal to prob(LEFT)+prob(UP)   [which we get from actual_actions_probability]
 
+
+def helper_action_for_max_sum_aux(mdp, state, U_curr, picked_action):
+    # Iterate over possible states picked_action will get you to (all s')
+    sum_picked_action = 0
+    actual_actions_probability = mdp.transition_function[picked_action]
+    states_visited_with_action = []
+    # Iterate over possible states picked_action will get you to (all s')
+    for index, actual_action in enumerate(mdp.actions):
+        actual_next_state = mdp.step(state, actual_action) # == s'
+        if actual_next_state in states_visited_with_action:
+            # print(f"----For ({state[0]},{state[1]}), after {picked_action}, will actually do {actual_action}, gets to state {actual_next_state} : VISITED already, skip")
+            continue
+        states_visited_with_action += [actual_next_state]
+
+        # Get properties of s'
+        utility_next_state = U_curr[actual_next_state[0]][actual_next_state[1]]
+        prob_next_state = helper_probability_to_next_state(mdp, state, actual_actions_probability, actual_next_state)
+        calc = prob_next_state*utility_next_state
+        
+        # Add calc to sum_picked_action because we are summing
+        sum_picked_action += calc
+        # print(f"----For ({state[0]},{state[1]}), after {picked_action}, will actually do {actual_action}, gets to state {actual_next_state}, utility: {utility_next_state}, prob of that state from our action: {prob_next_state} -> add to sum {prob_next_state*utility_next_state}, now sum for action = {sum_picked_action}")
+    
+    return sum_picked_action
+
+
 def helper_action_for_max_sum(mdp, state, U_curr):
 
     # SOLVES: "max a in Actions such that sum [...]"" part of the formula
@@ -23,27 +49,7 @@ def helper_action_for_max_sum(mdp, state, U_curr):
 
     # Iterate over actions
     for picked_action in mdp.actions:
-        sum_picked_action = 0
-        actual_actions_probability = mdp.transition_function[picked_action]
-        states_visited_with_action = []
-        # Iterate over possible states picked_action will get you to (all s')
-        for index, actual_action in enumerate(mdp.actions):
-            actual_next_state = mdp.step(state, actual_action) # == s'
-            if actual_next_state in states_visited_with_action:
-                # print(f"----For ({state[0]},{state[1]}), after {picked_action}, will actually do {actual_action}, gets to state {actual_next_state} : VISITED already, skip")
-                continue
-            states_visited_with_action += [actual_next_state]
-
-            # Get properties of s'
-            utility_next_state = U_curr[actual_next_state[0]][actual_next_state[1]]
-            prob_next_state = helper_probability_to_next_state(mdp, state, actual_actions_probability, actual_next_state)
-            calc = prob_next_state*utility_next_state
-            
-            # Add calc to sum_picked_action because we are summing
-            sum_picked_action += calc
-            # print(f"----For ({state[0]},{state[1]}), after {picked_action}, will actually do {actual_action}, gets to state {actual_next_state}, utility: {utility_next_state}, prob of that state from our action: {prob_next_state} -> add to sum {prob_next_state*utility_next_state}, now sum for action = {sum_picked_action}")
-        
-        # Keep only max (sum, action) 
+        sum_picked_action = helper_action_for_max_sum_aux(mdp, state, U_curr, picked_action)
         sum_picked_action_tuple = (sum_picked_action, picked_action)
         max_sum_action_tuple = max(max_sum_action_tuple, sum_picked_action_tuple)
 
