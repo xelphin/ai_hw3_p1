@@ -19,27 +19,24 @@ def helper_probability_to_next_state(mdp, state, actual_actions_probability, nex
 
 
 def helper_action_for_max_sum_aux(mdp, state, U_curr, picked_action):
-    # Iterate over possible states picked_action will get you to (all s')
     sum_picked_action = 0
     actual_actions_probability = mdp.transition_function[picked_action]
-    states_visited_with_action = []
     # Iterate over possible states picked_action will get you to (all s')
-    for index, actual_action in enumerate(mdp.actions):
-        actual_next_state = mdp.step(state, actual_action) # == s'
-        if actual_next_state in states_visited_with_action:
-            # print(f"----For ({state[0]},{state[1]}), after {picked_action}, will actually do {actual_action}, gets to state {actual_next_state} : VISITED already, skip")
-            continue
-        states_visited_with_action += [actual_next_state]
+    for r in range(mdp.num_row):
+        for c in range(mdp.num_col):
+            next_state = (r,c)
+            if (mdp.board[r][c] == "WALL"):
+                continue
+            prob_next_state = helper_probability_to_next_state(mdp, state, actual_actions_probability, next_state)
+            if prob_next_state == 0:
+                continue
+            # Actually possible to get to next_state
+            utility_next_state = U_curr[r][c]
+            calc = prob_next_state*utility_next_state
+            # Add calc to sum_picked_action because we are summing
+            sum_picked_action += calc
+            # print(f"----For ({state[0]},{state[1]}) -> s'=({r}, {c}) U(s'): {utility_next_state}, P(s',a): {prob_next_state} -> add to sum {prob_next_state*utility_next_state}, SUM = {sum_picked_action}")
 
-        # Get properties of s'
-        utility_next_state = U_curr[actual_next_state[0]][actual_next_state[1]]
-        prob_next_state = helper_probability_to_next_state(mdp, state, actual_actions_probability, actual_next_state)
-        calc = prob_next_state*utility_next_state
-        
-        # Add calc to sum_picked_action because we are summing
-        sum_picked_action += calc
-        # print(f"----For ({state[0]},{state[1]}), after {picked_action}, will actually do {actual_action}, gets to state {actual_next_state}, utility: {utility_next_state}, prob of that state from our action: {prob_next_state} -> add to sum {prob_next_state*utility_next_state}, now sum for action = {sum_picked_action}")
-    
     return sum_picked_action
 
 
@@ -51,11 +48,14 @@ def helper_action_for_max_sum(mdp, state, U_curr):
 
     # Iterate over actions
     for picked_action in mdp.actions:
+        # print(f"For state ({state[0]},{state[1]}), checking action {picked_action}")
         sum_picked_action = helper_action_for_max_sum_aux(mdp, state, U_curr, picked_action)
         sum_picked_action_tuple = (sum_picked_action, picked_action)
+        # print(f"For state ({state[0]},{state[1]}) picking max between {max_sum_action_tuple} and {sum_picked_action_tuple}")
         max_sum_action_tuple = max(max_sum_action_tuple, sum_picked_action_tuple)
 
-    # Return max (sum, action) 
+    # Return max (sum, action)
+    # print(f"FINAL: For state ({state[0]},{state[1]}) picked {max_sum_action_tuple}") 
     return max_sum_action_tuple
 
 def helper_blank_U(rows, cols):
@@ -193,7 +193,9 @@ def get_policy(mdp, U):
             state = (r,c)
             if mdp.board[r][c] == "WALL":
                 continue
+            # print(f"For {(r,c)} LETS FIND OPTIMAL ACTION")
             max_action = helper_action_for_max_sum(mdp, (r,c), U)[1] # TODO: Not sure if this is the calc I want
+            # print(f"For {(r,c)} FOUND OPTIMAL ACTION {max_action}")
             policy[r][c] = max_action
 
     policy = helper_make_wall_and_terminal_none_policy(mdp, policy)
