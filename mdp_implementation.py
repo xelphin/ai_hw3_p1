@@ -330,7 +330,6 @@ def get_all_policies(mdp, U):  # You can add more input parameters as needed
                     numOfPolicies = numOfPolicies*possibleActions
                     policy[r][c] = action_string
     mdp.print_policy(policy)
-    print(numOfPolicies)
     return(numOfPolicies)
                     
 
