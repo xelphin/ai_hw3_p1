@@ -315,7 +315,8 @@ def get_all_policies(mdp, U, returnAll=False):  # You can add more input paramet
     #
     # return: the number of different policies
     #
-    #print("hereeeeeeeeeeeeeeeeeeeeeee")
+    # returnAll - for convinience, we will want to use this function for the next function, where we 
+    # will determine whether the policy changed or not
     directions = {"RIGHT":"→","UP":"↑","LEFT":"←","DOWN":"↓"}
 
     numOfPolicies=1
@@ -374,7 +375,7 @@ def get_policy_for_different_rewards(mdp):  # You can add more input parameters 
     changed = False
     previous = None
 
-    when_board_changed = [] 
+    when_board_changed = [-100] 
 
     for i in np.arange(-5.0,5.0,0.01):
         U_zero = helper_blank_U(mdp.num_row, mdp.num_col)[:]
@@ -385,10 +386,9 @@ def get_policy_for_different_rewards(mdp):  # You can add more input parameters 
         policy = get_all_policies(mdp, U_new, True)
         if policy==previous:
             continue
-
-        print("\nR(s): {}".format(i))
+        when_board_changed.append(i)    
+        print("\n {} < R(s)<= {}".format(when_board_changed[-2],when_board_changed[-1]))
         mdp.print_policy(policy)
-        when_board_changed.append(i)
         previous=policy
         
 
