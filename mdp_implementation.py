@@ -40,22 +40,27 @@ def helper_action_for_max_sum_aux(mdp, state, U_curr, picked_action):
     return sum_picked_action
 
 
-def helper_action_for_max_sum(mdp, state, U_curr):
+def helper_action_for_max_sum(mdp, state, U_curr, All_Policies=False):
 
     # SOLVES: "max a in Actions such that sum [...]"" part of the formula
 
     max_sum_action_tuple = (float('-inf'), "ACTION NONE")
 
+    actions=[]
     # Iterate over actions
     for picked_action in mdp.actions:
         # print(f"For state ({state[0]},{state[1]}), checking action {picked_action}")
         sum_picked_action = helper_action_for_max_sum_aux(mdp, state, U_curr, picked_action)
         sum_picked_action_tuple = (sum_picked_action, picked_action)
         # print(f"For state ({state[0]},{state[1]}) picking max between {max_sum_action_tuple} and {sum_picked_action_tuple}")
+        if (All_Policies):
+            actions.append(sum_picked_action_tuple)
         max_sum_action_tuple = max(max_sum_action_tuple, sum_picked_action_tuple)
 
     # Return max (sum, action)
     # print(f"FINAL: For state ({state[0]},{state[1]}) picked {max_sum_action_tuple}") 
+    if (All_Policies):
+        return actions
     return max_sum_action_tuple
 
 def helper_blank_U(rows, cols):
@@ -177,7 +182,6 @@ def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
         # print("###################################")
         # print("###################################")
         # mdp.print_utility(U_new)
-
     return U_new
 
 
@@ -301,10 +305,38 @@ def get_all_policies(mdp, U):  # You can add more input parameters as needed
     #
     # return: the number of different policies
     #
+    #print("hereeeeeeeeeeeeeeeeeeeeeee")
+    directions = {"RIGHT":"→","UP":"↑","LEFT":"←","DOWN":"↓"}
 
-    # ====== YOUR CODE: ======
-    raise NotImplementedError
-    # ========================
+    numOfPolicies=1
+
+    policy = helper_blank_policy(mdp.num_row, mdp.num_col)[:]
+
+    for r in range(mdp.num_row):
+            for c in range(mdp.num_col):
+                # Skip wall states and terminal states
+                if (mdp.board[r][c] == "WALL") or ((r,c) in mdp.terminal_states):
+                    continue
+                # Not terminal state
+                else:
+                    possibleActions=0
+                    v = helper_action_for_max_sum(mdp, (r,c), U, True)
+                    max_value_action = max(v)
+                    action_string = ""
+                    for action_tuple in v:
+                        if action_tuple[0] == max_value_action[0]:
+                            action_string = action_string+directions[action_tuple[1]]
+                            possibleActions+=1
+                    numOfPolicies = numOfPolicies*possibleActions
+                    policy[r][c] = action_string
+    mdp.print_policy(policy)
+    print(numOfPolicies)
+    return(numOfPolicies)
+                    
+
+
+
+    
 
 
 def get_policy_for_different_rewards(mdp):  # You can add more input parameters as needed
