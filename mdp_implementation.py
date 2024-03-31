@@ -40,22 +40,27 @@ def helper_action_for_max_sum_aux(mdp, state, U_curr, picked_action):
     return sum_picked_action
 
 
-def helper_action_for_max_sum(mdp, state, U_curr):
+def helper_action_for_max_sum(mdp, state, U_curr, All_Policies=False):
 
     # SOLVES: "max a in Actions such that sum [...]"" part of the formula
 
     max_sum_action_tuple = (float('-inf'), "ACTION NONE")
 
+    actions=[]
     # Iterate over actions
     for picked_action in mdp.actions:
         # print(f"For state ({state[0]},{state[1]}), checking action {picked_action}")
         sum_picked_action = helper_action_for_max_sum_aux(mdp, state, U_curr, picked_action)
         sum_picked_action_tuple = (sum_picked_action, picked_action)
         # print(f"For state ({state[0]},{state[1]}) picking max between {max_sum_action_tuple} and {sum_picked_action_tuple}")
+        if (All_Policies):
+            actions.append(sum_picked_action_tuple)
         max_sum_action_tuple = max(max_sum_action_tuple, sum_picked_action_tuple)
 
     # Return max (sum, action)
     # print(f"FINAL: For state ({state[0]},{state[1]}) picked {max_sum_action_tuple}") 
+    if (All_Policies):
+        return actions
     return max_sum_action_tuple
 
 def helper_blank_U(rows, cols):
@@ -131,7 +136,15 @@ def helper_make_wall_and_terminal_none_policy(mdp, policy):
 
     return policy_new
 
-
+def helper_update_MDP_board(i, mdp):
+        for r in range(mdp.num_row):
+            for c in range(mdp.num_col):
+                # Skip wall states and terminal states
+                if (mdp.board[r][c] == "WALL") or ((r,c) in mdp.terminal_states):
+                    continue
+                # Not terminal state
+                else:
+                    mdp.board[r][c] =str(i)
 
 def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
     # Given the mdp, the initial utility of each state - U_init,
@@ -143,6 +156,7 @@ def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
     U_new = helper_blank_U(mdp.num_row, mdp.num_col)[:]
     delta = float('inf')
     discount = mdp.gamma
+
 
     while (delta >= epsilon*(1-discount)/discount):
         delta = 0
@@ -171,13 +185,13 @@ def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
                 # Update delta
                 if abs(U_new[r][c] - U_curr[r][c])> delta:
                     delta = abs(U_new[r][c] - U_curr[r][c])
+                    
                     # print(f"New delta {delta}     (reminder we need delta < {epsilon*(1-discount)/discount})")
 
         # print("###################################")
         # print("###################################")
         # print("###################################")
         # mdp.print_utility(U_new)
-
     return U_new
 
 
@@ -293,7 +307,7 @@ def policy_iteration(mdp, policy_init):
 """For this functions, you can import what ever you want """
 
 
-def get_all_policies(mdp, U):  # You can add more input parameters as needed
+def get_all_policies(mdp, U, returnAll=False):  # You can add more input parameters as needed
     # TODO:
     # Given the mdp, and the utility value U (which satisfies the Belman equation)
     # print / display all the policies that maintain this value
@@ -301,10 +315,53 @@ def get_all_policies(mdp, U):  # You can add more input parameters as needed
     #
     # return: the number of different policies
     #
+    # returnAll - for convinience, we will want to use this function for the next function, where we 
+    # will determine whether the policy changed or not
+    directions = {"RIGHT":"→","UP":"↑","LEFT":"←","DOWN":"↓"}
 
-    # ====== YOUR CODE: ======
-    raise NotImplementedError
-    # ========================
+    numOfPolicies=1
+
+    policy = helper_blank_policy(mdp.num_row, mdp.num_col)[:]
+
+    for r in range(mdp.num_row):
+            for c in range(mdp.num_col):
+                # Skip wall states and terminal states
+                if (mdp.board[r][c] == "WALL") or ((r,c) in mdp.terminal_states):
+                    continue
+                # Not terminal state
+                else:
+                    possibleActions=0
+                    v = helper_action_for_max_sum(mdp, (r,c), U, True)
+                    v_rounded = []
+                    max_value_action = float('-inf')
+                    for i in v:
+                        val_rounded = round(i[0],2)
+                        v_rounded.append([val_rounded, i[1]])
+                        if val_rounded> max_value_action:
+                            max_value_action = val_rounded
+
+
+                    action_string = ""
+                    for action_tuple in v_rounded:
+                        if action_tuple[0] == max_value_action:
+                            action_string = action_string+directions[action_tuple[1]]
+                            possibleActions+=1
+                    numOfPolicies = numOfPolicies*possibleActions
+                    policy[r][c] = action_string
+    
+    if returnAll:
+        return policy
+    mdp.print_policy(policy)
+    
+    
+
+    return(numOfPolicies)
+                    
+
+
+
+
+    
 
 
 def get_policy_for_different_rewards(mdp):  # You can add more input parameters as needed
@@ -314,6 +371,31 @@ def get_policy_for_different_rewards(mdp):  # You can add more input parameters 
     # (reward values for any non-finite state)
     #
 
-    # ====== YOUR CODE: ======
-    raise NotImplementedError
-    # ========================
+    
+    changed = False
+    previous = None
+
+    when_board_changed = [-100] 
+
+    for i in np.arange(-5.0,5.0,0.01):
+        U_zero = helper_blank_U(mdp.num_row, mdp.num_col)[:]
+        i= round(i,2)
+        helper_update_MDP_board(i, mdp)
+        U_new = value_iteration(mdp, U_zero)
+
+        policy = get_all_policies(mdp, U_new, True)
+        if policy==previous:
+            continue
+        when_board_changed.append(i)    
+        print("\n {} < R(s)<= {}".format(when_board_changed[-2],when_board_changed[-1]))
+        mdp.print_policy(policy)
+        previous=policy
+        
+
+    return when_board_changed
+
+
+        
+
+        
+
