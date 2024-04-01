@@ -32,6 +32,7 @@ def helper_action_for_max_sum_aux(mdp, state, U_curr, picked_action):
                 continue
             # Actually possible to get to next_state
             utility_next_state = U_curr[r][c]
+            # print(f"prob_next_state*utility_next_state: {prob_next_state}*{utility_next_state} mdp.board[r][c] = {mdp.board[r][c]}")
             calc = prob_next_state*utility_next_state
             # Add calc to sum_picked_action because we are summing
             sum_picked_action += calc
@@ -46,7 +47,7 @@ def helper_action_for_max_sum(mdp, state, U_curr, All_Policies=False):
 
     max_sum_action_tuple = (float('-inf'), "ACTION NONE")
 
-    actions=[]
+    all_sum_action_tuples=[]
     # Iterate over actions
     for picked_action in mdp.actions:
         # print(f"For state ({state[0]},{state[1]}), checking action {picked_action}")
@@ -54,14 +55,22 @@ def helper_action_for_max_sum(mdp, state, U_curr, All_Policies=False):
         sum_picked_action_tuple = (sum_picked_action, picked_action)
         # print(f"For state ({state[0]},{state[1]}) picking max between {max_sum_action_tuple} and {sum_picked_action_tuple}")
         if (All_Policies):
-            actions.append(sum_picked_action_tuple)
+            all_sum_action_tuples.append(sum_picked_action_tuple)
         max_sum_action_tuple = max(max_sum_action_tuple, sum_picked_action_tuple)
 
     # Return max (sum, action)
     # print(f"FINAL: For state ({state[0]},{state[1]}) picked {max_sum_action_tuple}") 
     if (All_Policies):
-        return actions
+        return all_sum_action_tuples
     return max_sum_action_tuple
+
+def helper_round_arr_sum_action_tuple(arr):
+    # Example: arr = [(2.234,UP), (1.2345,RIGHT), ...]
+    arr_rounded = []
+    for (sum, action) in arr:
+        val_rounded = round(sum,3)
+        arr_rounded.append((val_rounded, action))
+    return arr_rounded
 
 def helper_blank_U(rows, cols):
     # Because arrays are by reference, so i need to be sure i get hard copies
@@ -145,6 +154,12 @@ def helper_update_MDP_board(i, mdp):
                 # Not terminal state
                 else:
                     mdp.board[r][c] =str(i)
+
+
+def helper_print_reward_results(mdp, results):
+    for (minR, maxR, policy) in results:
+        print("\n {} <= R(s) < {}".format(minR,maxR))
+        mdp.print_policy(policy)
 
 def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
     # Given the mdp, the initial utility of each state - U_init,
@@ -308,7 +323,6 @@ def policy_iteration(mdp, policy_init):
 
 
 def get_all_policies(mdp, U, returnAll=False):  # You can add more input parameters as needed
-    # TODO:
     # Given the mdp, and the utility value U (which satisfies the Belman equation)
     # print / display all the policies that maintain this value
     # (a visualization must be performed to display all the policies)
@@ -331,70 +345,77 @@ def get_all_policies(mdp, U, returnAll=False):  # You can add more input paramet
                 # Not terminal state
                 else:
                     possibleActions=0
-                    v = helper_action_for_max_sum(mdp, (r,c), U, True)
-                    v_rounded = []
-                    max_value_action = float('-inf')
-                    for i in v:
-                        val_rounded = round(i[0],2)
-                        v_rounded.append([val_rounded, i[1]])
-                        if val_rounded> max_value_action:
-                            max_value_action = val_rounded
-
+                    arr_ValAction_tuples = helper_action_for_max_sum(mdp, (r,c), U, True)
+                    arr_ValAction_tuples = helper_round_arr_sum_action_tuple(arr_ValAction_tuples)
+                    max_value = max(arr_ValAction_tuples, key= lambda x: x[0])[0]
+                    # print(f"For {(r,c)}: {arr_ValAction_tuples} with max_value = {max_value}")
 
                     action_string = ""
-                    for action_tuple in v_rounded:
-                        if action_tuple[0] == max_value_action:
-                            action_string = action_string+directions[action_tuple[1]]
+                    for (val,action) in arr_ValAction_tuples:
+                        if val == max_value:
+                            action_string = action_string+directions[action]
                             possibleActions+=1
-                    numOfPolicies = numOfPolicies*possibleActions
+                    if (possibleActions > 0):
+                        numOfPolicies = numOfPolicies*possibleActions
                     policy[r][c] = action_string
     
     if returnAll:
         return policy
     mdp.print_policy(policy)
-    
-    
 
     return(numOfPolicies)
                     
 
 
 
-
-    
-
-
 def get_policy_for_different_rewards(mdp):  # You can add more input parameters as needed
-    # TODO:
     # Given the mdp
     # print / displas the optimal policy as a function of r
     # (reward values for any non-finite state)
     #
 
-    
-    changed = False
     previous = None
+    results = []
+    when_board_changed = []
 
-    when_board_changed = [-100] 
+    curr_LeftLimit = -5
+    curr_RightLimit = 5
 
-    for i in np.arange(-5.0,5.0,0.01):
+    for new_reward in np.arange(-5.0,5.0,0.01): 
         U_zero = helper_blank_U(mdp.num_row, mdp.num_col)[:]
-        i= round(i,2)
-        helper_update_MDP_board(i, mdp)
-        U_new = value_iteration(mdp, U_zero)
+        new_reward = round(new_reward,2)
 
+        # New board
+        helper_update_MDP_board(new_reward, mdp)
+        U_new = value_iteration(mdp, U_zero)
         policy = get_all_policies(mdp, U_new, True)
+        if previous == None:
+            previous = policy
+            continue
         if policy==previous:
             continue
-        when_board_changed.append(i)    
-        print("\n {} < R(s)<= {}".format(when_board_changed[-2],when_board_changed[-1]))
-        mdp.print_policy(policy)
+
+        # The policy changed
+        curr_RightLimit = new_reward
+        when_board_changed.append(curr_RightLimit)
+        results += [(curr_LeftLimit,curr_RightLimit,previous[:])]
+        curr_LeftLimit = curr_RightLimit
+        # print(f"Switched at {curr_RightLimit} from")
+        # mdp.print_policy(previous)
+        # print(f"To")
+        # mdp.print_policy(policy)
         previous=policy
-        
+
+    # Case empty, means the policy always stayed the same
+    if len(results) == 0:
+        results += (-5, 5, previous)
+    else:
+        # Update the RightLimit of the last result to be 5
+        results += [(curr_LeftLimit,5,previous)]
+
+    helper_print_reward_results(mdp, results)
 
     return when_board_changed
-
-
         
 
         
