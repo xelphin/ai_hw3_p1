@@ -331,7 +331,7 @@ def get_all_policies(mdp, U,epsilon=10 ** (-3), returnAll=False):  # You can add
                 # Not terminal state
                 else:
                     possibleActions=0
-                    v = helper_action_for_max_sum(mdp, (r,c), U, True)
+                    v = helper_action_for_max_sum(mdp, (r,c), U, True) #get all action's expectencies
                     
                     max_value_action = float('-inf')
                     
@@ -373,13 +373,13 @@ def get_policy_for_different_rewards(mdp, epsilon=10 ** (-3)):  # You can add mo
     for i in np.arange(-5.0,5.0,0.01):
 
         U_zero = helper_blank_U(mdp.num_row, mdp.num_col)[:]
-        i= round(i,2)
-        helper_update_MDP_board(i, mdp)
-        U_new = value_iteration(mdp, U_zero)
-        policy = get_all_policies(mdp, U_new,epsilon=epsilon, returnAll=True)
+        i= round(i,2) #round the reward to 2 decimal places to avoid floating point errors
+        helper_update_MDP_board(i, mdp) #update the board with the new rewards
+        U_new = value_iteration(mdp, U_zero) #get the new utility
+        policy = get_all_policies(mdp, U_new,epsilon=epsilon, returnAll=True) #get the new policy
         
 
-        if policy==previous:
+        if policy==previous: 
             continue
         previous=policy
 
@@ -392,7 +392,7 @@ def get_policy_for_different_rewards(mdp, epsilon=10 ** (-3)):  # You can add mo
         mdp.print_policy(policy)
         
 
-    return when_board_changed[1:]
+    return when_board_changed[1:] #in the piazza post, it was mentioned that below -5 should be excluded, so I am returning from 1
 
 
         
