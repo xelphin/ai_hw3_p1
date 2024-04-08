@@ -251,7 +251,6 @@ def policy_evaluation(mdp, policy):
     P_matrix_wDiscount = helper_clean_matrix(P_matrix_wDiscount, wall_indices[:])
     I_matrix = helper_clean_matrix(I_matrix, wall_indices[:])
     R_vector = helper_clean_vector(R_vector, wall_indices[:])
-
     # Invert (I-P_matrix_wDiscount)
     Inverse_I_PwDiscount = np.linalg.inv(I_matrix-P_matrix_wDiscount)
 
@@ -307,7 +306,7 @@ def policy_iteration(mdp, policy_init):
 """For this functions, you can import what ever you want """
 
 
-def get_all_policies(mdp, U, returnAll=False):  # You can add more input parameters as needed
+def get_all_policies(mdp, U,epsilon=10 ** (-3), returnAll=False):  # You can add more input parameters as needed
     # TODO:
     # Given the mdp, and the utility value U (which satisfies the Belman equation)
     # print / display all the policies that maintain this value
@@ -317,8 +316,9 @@ def get_all_policies(mdp, U, returnAll=False):  # You can add more input paramet
     #
     # returnAll - for convinience, we will want to use this function for the next function, where we 
     # will determine whether the policy changed or not
-    directions = {"RIGHT":"→","UP":"↑","LEFT":"←","DOWN":"↓"}
-
+    
+    directions = {"RIGHT":"R","UP":"U","LEFT":"L","DOWN":"D"}
+    
     numOfPolicies=1
 
     policy = helper_blank_policy(mdp.num_row, mdp.num_col)[:]
@@ -331,68 +331,71 @@ def get_all_policies(mdp, U, returnAll=False):  # You can add more input paramet
                 # Not terminal state
                 else:
                     possibleActions=0
-                    v = helper_action_for_max_sum(mdp, (r,c), U, True)
-                    v_rounded = []
+                    v = helper_action_for_max_sum(mdp, (r,c), U, True) #get all action's expectencies
+                    
                     max_value_action = float('-inf')
-                    for i in v:
-                        val_rounded = round(i[0],2)
-                        v_rounded.append([val_rounded, i[1]])
-                        if val_rounded> max_value_action:
-                            max_value_action = val_rounded
+                    
+                    
 
+                    for i in v:
+                        if i[0]> max_value_action:
+                            max_value_action = i[0]
 
                     action_string = ""
-                    for action_tuple in v_rounded:
-                        if action_tuple[0] == max_value_action:
+                    for action_tuple in v:
+                            
+                        if abs(action_tuple[0]-max_value_action)<epsilon:
                             action_string = action_string+directions[action_tuple[1]]
                             possibleActions+=1
+                            
                     numOfPolicies = numOfPolicies*possibleActions
                     policy[r][c] = action_string
     
     if returnAll:
         return policy
     mdp.print_policy(policy)
-    
-    
-
     return(numOfPolicies)
                     
 
 
-
-
-    
-
-
-def get_policy_for_different_rewards(mdp):  # You can add more input parameters as needed
+def get_policy_for_different_rewards(mdp, epsilon=10 ** (-3)):  # You can add more input parameters as needed
     # TODO:
     # Given the mdp
     # print / displas the optimal policy as a function of r
     # (reward values for any non-finite state)
-    #
 
     
-    changed = False
     previous = None
+    policy=None
 
-    when_board_changed = [-100] 
+    when_board_changed = [] 
 
     for i in np.arange(-5.0,5.0,0.01):
-        U_zero = helper_blank_U(mdp.num_row, mdp.num_col)[:]
-        i= round(i,2)
-        helper_update_MDP_board(i, mdp)
-        U_new = value_iteration(mdp, U_zero)
 
-        policy = get_all_policies(mdp, U_new, True)
-        if policy==previous:
-            continue
-        when_board_changed.append(i)    
-        print("\n {} < R(s)<= {}".format(when_board_changed[-2],when_board_changed[-1]))
-        mdp.print_policy(policy)
-        previous=policy
+        U_zero = helper_blank_U(mdp.num_row, mdp.num_col)[:]
+        i= round(i,2) #round the reward to 2 decimal places to avoid floating point errors
+        helper_update_MDP_board(i, mdp) #update the board with the new rewards
+        U_new = value_iteration(mdp, U_zero) #get the new utility
+        policy = get_all_policies(mdp, U_new,epsilon=epsilon, returnAll=True) #get the new policy
         
 
-    return when_board_changed
+        if policy==previous: 
+            continue
+        
+
+        when_board_changed.append(i)
+        if len(when_board_changed)==1:
+            previous=policy
+            continue
+            
+        else:    
+            print("\n {} <= R(s)< {}".format(when_board_changed[-2],when_board_changed[-1]))
+        mdp.print_policy(previous)
+        previous=policy
+        
+    print("\n {} <= R(s)< inf".format(when_board_changed[-1]))
+    mdp.print_policy(policy)
+    return when_board_changed[1:] #in the piazza post, it was mentioned that below -5 should be excluded, so I am returning from 1
 
 
         
