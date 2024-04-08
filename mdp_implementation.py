@@ -381,17 +381,20 @@ def get_policy_for_different_rewards(mdp, epsilon=10 ** (-3)):  # You can add mo
 
         if policy==previous: 
             continue
-        previous=policy
+        
 
         when_board_changed.append(i)
         if len(when_board_changed)==1:
-            print("\n R(s)<= {}".format(when_board_changed[-1]))
+            previous=policy
+            continue
             
         else:    
-            print("\n {} < R(s)<= {}".format(when_board_changed[-2],when_board_changed[-1]))
-        mdp.print_policy(policy)
+            print("\n {} <= R(s)< {}".format(when_board_changed[-2],when_board_changed[-1]))
+        mdp.print_policy(previous)
+        previous=policy
         
-
+    print("\n {} <= R(s)< inf".format(when_board_changed[-1]))
+    mdp.print_policy(policy)
     return when_board_changed[1:] #in the piazza post, it was mentioned that below -5 should be excluded, so I am returning from 1
 
 
